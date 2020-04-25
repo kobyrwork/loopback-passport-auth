@@ -1,5 +1,9 @@
+// Copyright IBM Corp. 2020. All Rights Reserved.
+// Node module: @loopback/example-passport-login
+// This file is licensed under the MIT License.
+// License text available at https://opensource.org/licenses/MIT
+
 import {BootMixin} from '@loopback/boot';
-import {ApplicationConfig} from '@loopback/core';
 import {
   RestExplorerBindings,
   RestExplorerComponent,
@@ -9,6 +13,18 @@ import {RestApplication} from '@loopback/rest';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
+import {AuthenticationComponent} from '@loopback/authentication';
+import {
+  FaceBookOauth2Authorization,
+  GoogleOauth2Authorization,
+  Oauth2AuthStrategy,
+  LocalAuthStrategy,
+  SessionStrategy,
+  BasicStrategy,
+} from './authentication-strategies';
+import {PassportUserIdentityService, UserServiceBindings} from './services';
+import {ApplicationConfig, createBindingFromClass} from '@loopback/core';
+import {CrudRestComponent} from '@loopback/rest-crud';
 
 export class LoopbackApplication extends BootMixin(
   ServiceMixin(RepositoryMixin(RestApplication)),
@@ -16,17 +32,13 @@ export class LoopbackApplication extends BootMixin(
   constructor(options: ApplicationConfig = {}) {
     super(options);
 
+    this.setUpBindings();
+
     // Set up the custom sequence
     this.sequence(MySequence);
 
-    // Set up default home page
-    this.static('/', path.join(__dirname, '../public'));
-
-    // Customize @loopback/rest-explorer configuration here
-    this.configure(RestExplorerBindings.COMPONENT).to({
-      path: '/explorer',
-    });
-    this.component(RestExplorerComponent);
+    this.component(AuthenticationComponent);
+    this.component(CrudRestComponent);
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
@@ -38,5 +50,17 @@ export class LoopbackApplication extends BootMixin(
         nested: true,
       },
     };
+  }
+
+  setUpBindings(): void {
+    this.bind(UserServiceBindings.PASSPORT_USER_IDENTITY_SERVICE).toClass(
+      PassportUserIdentityService,
+    );
+    this.add(createBindingFromClass(LocalAuthStrategy));
+    this.add(createBindingFromClass(FaceBookOauth2Authorization));
+    this.add(createBindingFromClass(GoogleOauth2Authorization));
+    this.add(createBindingFromClass(Oauth2AuthStrategy));
+    this.add(createBindingFromClass(SessionStrategy));
+    this.add(createBindingFromClass(BasicStrategy));
   }
 }
